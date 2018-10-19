@@ -46,6 +46,7 @@ func (val *validator) notLoggedInState() stateFn {
 		try := 0
 		err = val.join()
 		for err != nil {
+			log.Error("Failed to make deposit", "try", try, "err", err)
 			time.Sleep(3 * time.Second)
 
 			isValidator, err = val.consensus.IsValidator(val.walletAccount.Account().Address)
@@ -57,14 +58,13 @@ func (val *validator) notLoggedInState() stateFn {
 				break
 			}
 
-			if err = val.join(); err != nil {
-				log.Error("Failed to make deposit", "try", try, "err", err)
-			}
+			err = val.join()
 
 			if try >= 10 {
 				log.Error("Failed to make deposit. Stopping validation", "try", try)
 				return nil
 			}
+			try++
 		}
 		log.Warn("started as a validator")
 	}
@@ -160,7 +160,7 @@ func (val *validator) waitForProposal() {
 		select {
 		case block := <-val.blockCh:
 			if val.blockNumber.Cmp(block.Number()) != 0 {
-				log.Error(fmt.Sprintf("expected proposed block number %v, got %v",
+				log.Warn(fmt.Sprintf("expected proposed block number %v, got %v",
 					val.blockNumber.Int64(), block.Number().Int64()))
 			}
 
